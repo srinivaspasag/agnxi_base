@@ -1,0 +1,156 @@
+openapi: 3.0.3
+info:
+  title: agnxi Public API
+  description: Multi-tenant agent hosting — discover, invoke, and monitor agents.
+  version: 1.0.0
+
+servers:
+  - url: https://your-deployment.com
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/v1/agents:
+    get:
+      summary: List agents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, paused, archived]
+            default: active
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: List of agents (tenant-scoped)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        slug: { type: string }
+                        description: { type: string, nullable: true }
+                        status: { type: string }
+                        runtime: { type: string }
+                        version: { type: integer }
+                        created_at: { type: string, format: date-time }
+        "401":
+          description: Unauthorized
+
+  /api/v1/agents/{slug}/invoke:
+    post:
+      summary: Invoke agent (async)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input: { type: object, description: Agent-specific input }
+                metadata: { type: object, optional: true }
+      responses:
+        "200":
+          description: Invocation queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invocation_id: { type: string, example: "agnxi_inv_..." }
+                  status: { type: string, example: "queued" }
+                  message: { type: string }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found or not active
+
+  /api/v1/invocations/{id}:
+    get:
+      summary: Get invocation status and result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: External id (e.g. agnxi_inv_...)
+      responses:
+        "200":
+          description: Invocation details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invocation_id: { type: string }
+                  status: { type: string, enum: [queued, running, succeeded, failed, canceled, timeout] }
+                  input: { type: object }
+                  output: { type: object, nullable: true }
+                  error: { type: string, nullable: true }
+                  started_at: { type: string, format: date-time, nullable: true }
+                  completed_at: { type: string, format: date-time, nullable: true }
+                  created_at: { type: string, format: date-time }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
+  /api/v1/invocations/{id}/logs:
+    get:
+      summary: Get invocation logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seq: { type: integer }
+                        level: { type: string, enum: [debug, info, warn, error] }
+                        message: { type: string }
+                        payload: { type: object, nullable: true }
+                        created_at: { type: string, format: date-time }
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: API key (e.g. agnxi_key_...) or Supabase JWT

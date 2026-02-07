@@ -1,0 +1,14 @@
+---
+description: agnxi architecture and code rules. Prefer explicit, boring, scalable designs.
+globs: ["src/**"]
+---
+
+# agnxi rules
+
+- **No business logic in React components.** Put it in tRPC procedures, API route handlers, or `src/lib/*`. Components only render and call lib/API.
+- **Do not run agents inside Next.js.** Agent execution happens only at `AGENT_WORKER_URL` (external). Next.js only enqueues (DB + QStash) and the worker route calls the external URL.
+- **No Express.js.** Use Next.js App Router and Route Handlers only.
+- **No long-lived server memory.** No in-memory caches or module-level mutable state. Use DB or external (Redis/QStash).
+- **No blocking agent execution.** Invocations are async: create row, enqueue, return. Do not await agent completion in the request path.
+- **Never mix tenant data.** Every tenant-scoped query must filter by `tenant_id` (from auth). No cross-tenant joins or unscoped reads.
+- **Do not skip RLS.** All tenant-scoped tables have RLS enabled. Service role is used only server-side and only after resolving tenant; application code still scopes every query by tenant_id.

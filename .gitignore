@@ -1,0 +1,22 @@
+# Dependencies
+agnxi/node_modules/
+
+# Build / cache
+agnxi/.next/
+agnxi/out/
+*.tsbuildinfo
+
+# Env (secrets – never commit)
+env
+agnxi/.env
+agnxi/.env.local
+agnxi/.env.*.local
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Vercel
+.vercel
